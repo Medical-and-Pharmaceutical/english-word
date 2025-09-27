@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英単語クイズ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <main>
+    <h1>英単語クイズ</h1>
+
+    <div id="main-menu" class="screen">
+      <button data-mode="en-to-jp">英語 → 日本語</button>
+      <button data-mode="jp-to-en">日本語 → 英語</button>
+      <button id="view-wordbook-btn">単語帳を見る</button>
+    </div>
+
+    <div id="game-view" class="screen">
+      <div id="game-header">
+        <span id="question-counter"></span>
+        <span id="score-counter"></span>
+      </div>
+      <div id="question-area"></div>
+      <div id="choices-area"></div>
+      <div id="feedback-area"></div>
+      <button id="home-btn">ホームに戻る</button>
+    </div>
+      
+    <div id="result-view" class="screen">
+      <h2>クイズ結果</h2>
+      <div id="result-summary"></div>
+      <div id="result-actions">
+        <button id="retry-btn">もう一度挑戦</button>
+        <button id="back-to-home-btn">ホームに戻る</button>
+      </div>
+    </div>
+
+    <div id="wordbook-view" class="screen">
+      <h2>英単語一覧</h2>
+      <div id="wordbook-list-container">
+        </div>
+      <button id="wordbook-home-btn">ホームに戻る</button>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
