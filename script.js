@@ -1,4 +1,5 @@
 const wordList = [
+    // (単語リストは変更なし)
     { english: "sick", japanese: "病気の、具合が悪い" },
     { english: "ill", japanese: "病気の、具合が悪い" },
     { english: "sickness", japanese: "病気" },
@@ -367,10 +368,16 @@ function init() {
   showScreen('main-menu');
 }
 
+/**
+ * 画面表示を切り替える関数
+ * @param {string} screenId 表示する画面のID
+ */
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.style.display = 'none');
     const domKey = screenId.replace(/-(\w)/g, (m, c) => c.toUpperCase());
-    dom[domKey].style.display = 'flex';
+    if (dom[domKey]) {
+        dom[domKey].style.display = 'flex';
+    }
 }
 
 function startGame(mode) {
@@ -392,7 +399,7 @@ function endGame() {
             正答率: <span>${accuracy}%</span>
         `;
     } else {
-         dom.resultSummary.innerHTML = "クイズをプレイしませんでした。";
+         dom.resultSummary.innerHTML = "クイズはプレイされませんでした。";
     }
     showScreen('result-view');
 }
@@ -403,7 +410,9 @@ function loadNextQuestion() {
   gameState.isAnswered = false;
 
   if (gameState.currentWords.length === 0) {
-    gameState.currentWords = shuffleArray([...wordList]);
+    // 全単語を一周したら終了
+    endGame();
+    return;
   }
 
   gameState.questionNumber++;
@@ -424,9 +433,10 @@ function loadNextQuestion() {
   });
   
   while (choices.size < 4 && distractors.length > 0) {
-      const randomDistractor = distractors[Math.floor(Math.random() * distractors.length)];
-      const distractorText = gameState.mode === 'en-to-jp' ? randomDistractor.japanese : randomDistractor.english;
+      const randomIndex = Math.floor(Math.random() * distractors.length);
+      const distractorText = gameState.mode === 'en-to-jp' ? distractors[randomIndex].japanese : distractors[randomIndex].english;
       choices.add(distractorText);
+      distractors.splice(randomIndex, 1);
   }
 
   const shuffledChoices = shuffleArray(Array.from(choices));
@@ -474,50 +484,60 @@ function shuffleArray(array) {
   return array;
 }
 
-// --- NEW --- 単語帳のテーブルを作成して表示する関数
-function createWordbookTable() {
-    const container = dom.wordbookListContainer;
-    // テーブルが既に作成されていれば何もしない
-    if (container.querySelector('table')) {
-        return;
-    }
+/**
+ * 単語帳リストをカード形式で生成する関数
+ */
+function createWordbookList() {
+    const container = dom.wordList;
+    if (!container) return;
+    container.innerHTML = ''; // 既存のコンテンツをクリア
 
-    const table = document.createElement('table');
-    table.id = 'wordbook-table';
-
-    // ヘッダーを作成
-    const thead = table.createTHead();
-    const headerRow = thead.insertRow();
-    const th1 = document.createElement('th');
-    th1.textContent = '英語';
-    headerRow.appendChild(th1);
-    const th2 = document.createElement('th');
-    th2.textContent = '日本語';
-    headerRow.appendChild(th2);
-    
-    // ボディを作成
-    const tbody = table.createTBody();
     wordList.forEach(word => {
-        const row = tbody.insertRow();
-        const cell1 = row.insertCell();
-        cell1.textContent = word.english;
-        const cell2 = row.insertCell();
-        cell2.textContent = word.japanese;
+        const card = document.createElement('div');
+        card.className = 'word-card';
+        card.innerHTML = `
+            <p class="word-card-english">${word.english}</p>
+            <p class="word-card-japanese">${word.japanese}</p>
+        `;
+        container.appendChild(card);
     });
-
-    container.appendChild(table);
 }
 
+/**
+ * 単語帳の検索フィルタリング機能
+ */
+function filterWords() {
+    const filterText = dom.wordbookSearch.value.toLowerCase();
+    const wordCards = document.querySelectorAll('#word-list .word-card');
+
+    wordCards.forEach(card => {
+        const englishText = card.querySelector('.word-card-english').textContent.toLowerCase();
+        const japaneseText = card.querySelector('.word-card-japanese').textContent.toLowerCase();
+
+        if (englishText.includes(filterText) || japaneseText.includes(filterText)) {
+            card.style.display = '';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Cache DOM elements
+  // DOM要素をキャッシュ
   const ids = [
-    'main-menu', 'game-view', 'result-view', 'wordbook-view', // 'wordbook-view' を追加
+    'main-menu', 'game-view', 'result-view', 'wordbook-view',
     'question-counter', 'score-counter', 'question-area', 'choices-area', 
-    'feedback-area', 'result-summary', 'wordbook-list-container' // 'wordbook-list-container' を追加
+    'feedback-area', 'result-summary', 'word-list', 'wordbook-search'
   ];
-  ids.forEach(id => dom[id.replace(/-(\w)/g, (m, c) => c.toUpperCase())] = document.getElementById(id));
+  ids.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+          dom[id.replace(/-(\w)/g, (m, c) => c.toUpperCase())] = element;
+      }
+  });
   
-  // Add Event Listeners
+  // イベントリスナーを設定
   dom.mainMenu.addEventListener('click', (e) => {
     if (e.target.tagName !== 'BUTTON') return;
     
@@ -525,16 +545,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode) {
       startGame(mode);
     } else if (e.target.id === 'view-wordbook-btn') {
-      createWordbookTable(); // 単語帳テーブルを生成
-      showScreen('wordbook-view'); // 単語帳画面を表示
+      createWordbookList();
+      showScreen('wordbook-view');
     }
   });
   
-  document.querySelectorAll('#home-btn').forEach(btn => btn.addEventListener('click', endGame));
+  // 戻るボタンなどの汎用的なイベントリスナー
+  document.querySelectorAll('.home-btn').forEach(btn => btn.addEventListener('click', init));
   document.getElementById('retry-btn').addEventListener('click', () => startGame(gameState.mode));
-  document.getElementById('back-to-home-btn').addEventListener('click', init);
-  document.getElementById('wordbook-home-btn').addEventListener('click', init); // 単語帳画面の戻るボタン
   
-  // Initial Load
+  // 単語帳の検索イベント
+  if (dom.wordbookSearch) {
+      dom.wordbookSearch.addEventListener('keyup', filterWords);
+  }
+  
+  // 初期化
   init();
 });
